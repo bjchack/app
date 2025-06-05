@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Firebase Chat</title>
+  <style>
+    body { font-family: Arial; max-width: 480px; margin: auto; padding: 20px; }
+    #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
+    #messages div { margin-bottom: 8px; }
+    #inputMessage { width: 80%; padding: 10px; font-size: 16px; }
+    #sendBtn { padding: 10px 15px; font-size: 16px; }
+  </style>
+</head>
+<body>
 
+  <h2>Simple Firebase Chat</h2>
+  <div id="messages"></div>
+  <input type="text" id="inputMessage" placeholder="Type your message..." />
+  <button id="sendBtn">Send</button>
+
+  <!-- Firebase SDK v9 Modular -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC7V_7aytfd-5PkaUKHi8wIZF9orJaanZk",
+      authDomain: "videochatapp-fd75e.firebaseapp.com",
+      projectId: "videochatapp-fd75e",
+      storageBucket: "videochatapp-fd75e.appspot.com",
+      messagingSenderId: "587654231045",
+      appId: "1:587654231045:web:c578f9887747a72d01586c",
+      measurementId: "G-W6W35PMBY7"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const messagesDiv = document.getElementById("messages");
+    const inputMessage = document.getElementById("inputMessage");
+    const sendBtn = document.getElementById("sendBtn");
+
+    // Listen to new messages in Firestore, ordered by timestamp
+    const q = query(collection(db, "chatmessages"), orderBy("timestamp"));
+
+    onSnapshot(q, (snapshot) => {
+      messagesDiv.innerHTML = ""; // clear
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.textContent = data.text;
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight; // scroll to bottom
+    });
+
+    sendBtn.onclick = async () => {
+      const text = inputMessage.value.trim();
+      if (text.length === 0) return;
+
+      await addDoc(collection(db, "chatmessages"), {
+        text,
+        timestamp: serverTimestamp()
+      });
+
+      inputMessage.value = "";
+    };
+  </script>
+
+</body>
+</html>
