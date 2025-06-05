@@ -1,97 +1,148 @@
-// Firebase config (from you)
-const firebaseConfig = {
-  apiKey: "AIzaSyC7V_7aytfd-5PkaUKHi8wIZF9orJaanZk",
-  authDomain: "videochatapp-fd75e.firebaseapp.com",
-  projectId: "videochatapp-fd75e",
-  storageBucket: "videochatapp-fd75e.firebasestorage.app",
-  messagingSenderId: "587654231045",
-  appId: "1:587654231045:web:c578f9887747a72d01586c",
-  measurementId: "G-W6W35PMBY7"
-};
-
-// Init Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let localStream;
+let remoteStream;
+let peerConnection;
 
 const servers = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  iceServers: [
+    {
+      urls: [
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302"
+      ]
+    }
+  ]
 };
 
-let pc = new RTCPeerConnection(servers);
-let localStream;
-let remoteStream = new MediaStream();
-const roomInput = document.getElementById('roomInput');
-
+const roomInput = document.getElementById("roomInput");
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
-remoteVideo.srcObject = remoteStream;
 
-navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
-  localVideo.srcObject = stream;
-  localStream = stream;
-  stream.getTracks().forEach(track => pc.addTrack(track, stream));
+// ✅ Safe media access with error handling
+async function openUserMedia() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("Your browser does not support camera access.");
+      return;
+    }
 
-  pc.ontrack = event => {
-    event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
-  };
-});
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localVideo.srcObject = localStream;
 
+    remoteStream = new MediaStream();
+    remoteVideo.srcObject = remoteStream;
+
+  } catch (e) {
+    console.error("Error accessing media devices.", e);
+    alert("Error: Could not access your camera/mic.");
+  }
+}
+
+// ✅ Make sure it runs only after DOM loaded
+window.addEventListener("load", openUserMedia);
+
+// 🔘 Create Room
 async function createRoom() {
-  const roomRef = await db.collection("rooms").doc();
+  peerConnection = new RTCPeerConnection(servers);
+
+  localStream.getTracks().forEach((track) => {
+    peerConnection.addTrack(track, localStream);
+  });
+
+  const roomRef = await window.addDoc(window.collection(window.db, "rooms"), {});
   roomInput.value = roomRef.id;
 
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-
-  await roomRef.set({ offer: { type: offer.type, sdp: offer.sdp } });
-
-  pc.onicecandidate = event => {
+  peerConnection.onicecandidate = async (event) => {
     if (event.candidate) {
-      roomRef.collection("offerCandidates").add(event.candidate.toJSON());
+      await window.addDoc(window.collection(window.db, `rooms/${roomRef.id}/callerCandidates`), event.candidate.toJSON());
     }
   };
 
-  roomRef.onSnapshot(async snapshot => {
+  peerConnection.ontrack = (event) => {
+    event.streams[0].getTracks().forEach((track) => {
+      remoteStream.addTrack(track);
+    });
+  };
+
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+
+  const roomWithOffer = {
+    offer: {
+      type: offer.type,
+      sdp: offer.sdp
+    }
+  };
+
+  await window.setDoc(window.doc(window.db, "rooms", roomRef.id), roomWithOffer);
+
+  window.onSnapshot(window.doc(window.db, "rooms", roomRef.id), async (snapshot) => {
     const data = snapshot.data();
-    if (!pc.currentRemoteDescription && data?.answer) {
-      await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+    if (!peerConnection.currentRemoteDescription && data?.answer) {
+      const answer = new RTCSessionDescription(data.answer);
+      await peerConnection.setRemoteDescription(answer);
     }
   });
 
-  roomRef.collection("answerCandidates").onSnapshot(snapshot => {
-    snapshot.docChanges().forEach(change => {
+  window.onSnapshot(window.collection(window.db, `rooms/${roomRef.id}/calleeCandidates`), (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
       if (change.type === "added") {
-        pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
+        const candidate = new RTCIceCandidate(change.doc.data());
+        peerConnection.addIceCandidate(candidate);
       }
     });
   });
 }
 
+// 🔘 Join Room
 async function joinRoom() {
-  const roomId = roomInput.value;
-  const roomRef = db.collection("rooms").doc(roomId);
-  const roomSnapshot = await roomRef.get();
+  const roomId = roomInput.value.trim();
+  const roomRef = window.doc(window.db, "rooms", roomId);
+  const roomSnapshot = await window.getDoc(roomRef);
 
-  if (roomSnapshot.exists) {
-    const data = roomSnapshot.data();
-    await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    await roomRef.update({ answer: { type: answer.type, sdp: answer.sdp } });
-
-    pc.onicecandidate = event => {
-      if (event.candidate) {
-        roomRef.collection("answerCandidates").add(event.candidate.toJSON());
-      }
-    };
-
-    roomRef.collection("offerCandidates").onSnapshot(snapshot => {
-      snapshot.docChanges().forEach(change => {
-        if (change.type === "added") {
-          pc.addIceCandidate(new RTCIceCandidate(change.doc.data()));
-        }
-      });
-    });
+  if (!roomSnapshot.exists()) {
+    alert("Room does not exist!");
+    return;
   }
+
+  peerConnection = new RTCPeerConnection(servers);
+
+  localStream.getTracks().forEach((track) => {
+    peerConnection.addTrack(track, localStream);
+  });
+
+  peerConnection.onicecandidate = async (event) => {
+    if (event.candidate) {
+      await window.addDoc(window.collection(window.db, `rooms/${roomId}/calleeCandidates`), event.candidate.toJSON());
+    }
+  };
+
+  peerConnection.ontrack = (event) => {
+    event.streams[0].getTracks().forEach((track) => {
+      remoteStream.addTrack(track);
+    });
+  };
+
+  const offer = roomSnapshot.data().offer;
+  await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+  const answer = await peerConnection.createAnswer();
+  await peerConnection.setLocalDescription(answer);
+
+  const roomWithAnswer = {
+    answer: {
+      type: answer.type,
+      sdp: answer.sdp
+    }
+  };
+
+  await window.setDoc(roomRef, roomWithAnswer);
+
+  window.onSnapshot(window.collection(window.db, `rooms/${roomId}/callerCandidates`), (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === "added") {
+        const candidate = new RTCIceCandidate(change.doc.data());
+        peerConnection.addIceCandidate(candidate);
+      }
+    });
+  });
 }
