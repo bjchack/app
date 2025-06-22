@@ -1,26 +1,40 @@
 <!DOCTYPE html>
-<html><head><title>Test Popup</title></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ZLTS10G Auto-Update</title>
+  <style>
+    body{font-family:sans-serif;text-align:center;padding:30px;background:#f0f0f0}
+    .status{margin-top:25px;font-size:18px;color:#444}
+  </style>
+</head>
 <body>
-  <h1>Testing Update Checker</h1>
-  <script>
-    const currentVersion = '1.0';
-    const versionURL = 'https://bjchack.github.io/app/version.txt';
 
-    fetch(versionURL)
-      .then(res => {
-        alert("✅ Fetch status: " + res.status);
-        return res.text();
-      })
-      .then(txt => {
-        alert("🎯 version.txt content: [" + txt + "]");
-        if (txt.trim() !== currentVersion) {
-          alert("🔔 Update available! New version: " + txt.trim());
-        } else {
-          alert("✅ Up-to-date.");
-        }
-      })
-      .catch(err => {
-        alert("❌ Fetch error: " + err);
-      });
-  </script>
-</body></html>
+<h2>ZLTS10G</h2>
+<p>Current Version: <strong>1.0</strong></p>
+<p id="status" class="status">Checking for updates…</p>
+
+<script>
+  const currentVersion = '1.0';                              // ← palitan mo tuwing magre-release
+  const versionURL     = 'https://bjchack.github.io/app/version.txt';
+  const apkURL         = 'https://bjchack.github.io/app/MyWebApp.apk';
+
+  fetch(versionURL)
+    .then(r => r.text())
+    .then(v => {
+      const latest = v.trim();
+      if (latest !== currentVersion){
+        document.getElementById('status').textContent = '⬇️ Downloading update…';
+        window.location.href = apkURL;                       // auto-download
+      }else{
+        document.getElementById('status').textContent = '✅ App is up to date.';
+      }
+    })
+    .catch(e=>{
+      document.getElementById('status').textContent = '⚠️ Update check failed.';
+      console.error(e);
+    });
+</script>
+
+</body>
+</html>
