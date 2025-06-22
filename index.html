@@ -1,28 +1,26 @@
 <!DOCTYPE html>
-<html>
-<head><title>Update Test</title></head>
+<html><head><title>Test Popup</title></head>
 <body>
-  <h1>Update Test</h1>
+  <h1>Testing Update Checker</h1>
   <script>
     const currentVersion = '1.0';
     const versionURL = 'https://bjchack.github.io/app/version.txt';
 
     fetch(versionURL)
-      .then(r => {
-        alert("Fetched version.txt: " + r.status);
-        return r.text();
+      .then(res => {
+        alert("✅ Fetch status: " + res.status);
+        return res.text();
       })
       .then(txt => {
-        alert("Content: [" + txt + "]");
+        alert("🎯 version.txt content: [" + txt + "]");
         if (txt.trim() !== currentVersion) {
-          alert("🔔 May bagong version: " + txt.trim());
+          alert("🔔 Update available! New version: " + txt.trim());
         } else {
-          alert("✅ Up to date");
+          alert("✅ Up-to-date.");
         }
       })
       .catch(err => {
-        alert("Fetch failed: " + err);
+        alert("❌ Fetch error: " + err);
       });
   </script>
-</body>
-</html>
+</body></html>
