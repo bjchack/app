@@ -13,7 +13,7 @@
         return r.text();
       })
       .then(txt => {
-        alert("Content: " + txt);
+        alert("Content: [" + txt + "]");
         if (txt.trim() !== currentVersion) {
           alert("🔔 May bagong version: " + txt.trim());
         } else {
