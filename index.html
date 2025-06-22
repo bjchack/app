@@ -2,70 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simple Firebase Chat</title>
+  <title>ZLTS10G App</title>
   <style>
-    body { font-family: Arial; max-width: 480px; margin: auto; padding: 20px; }
-    #messages { border: 1px solid #ccc; height: 300px; overflow-y: scroll; padding: 10px; margin-bottom: 10px; }
-    #messages div { margin-bottom: 8px; }
-    #inputMessage { width: 80%; padding: 10px; font-size: 16px; }
-    #sendBtn { padding: 10px 15px; font-size: 16px; }
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+      padding: 30px;
+    }
+
+    #updatePopup {
+      background: white;
+      border: 2px solid #444;
+      padding: 20px;
+      width: 90%;
+      max-width: 320px;
+      margin: 30px auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      border-radius: 10px;
+      display: none;
+      position: relative;
+      animation: fadeIn 0.5s ease;
+    }
+
+    #updatePopup button {
+      padding: 10px 15px;
+      margin: 5px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .yes-button {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .later-button {
+      background-color: #ccc;
+      color: black;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
   </style>
 </head>
 <body>
 
-  <h2>Simple Firebase Chat</h2>
-  <div id="messages"></div>
-  <input type="text" id="inputMessage" placeholder="Type your message..." />
-  <button id="sendBtn">Send</button>
+  <h2>ZLTS10G</h2>
+  <p>Current Version: <strong>1.0</strong></p>
 
-  <!-- Firebase SDK v9 Modular -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  <!-- Update popup -->
+  <div id="updatePopup">
+    <p><strong>Update Available!</strong><br>May bagong version ng app.</p>
+    <button class="yes-button" onclick="downloadUpdate()">Update Now</button>
+    <button class="later-button" onclick="hideUpdatePopup()">Later</button>
+  </div>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyC7V_7aytfd-5PkaUKHi8wIZF9orJaanZk",
-      authDomain: "videochatapp-fd75e.firebaseapp.com",
-      projectId: "videochatapp-fd75e",
-      storageBucket: "videochatapp-fd75e.appspot.com",
-      messagingSenderId: "587654231045",
-      appId: "1:587654231045:web:c578f9887747a72d01586c",
-      measurementId: "G-W6W35PMBY7"
-    };
+  <script>
+    const currentVersion = '1.0'; // Local version — change this when rebuilding app
+    const versionURL = 'https://bjchack.github.io/zlts10g/version.txt';
+    const apkDownloadURL = 'https://bjchack.github.io/zlts10g/MyWebApp.apk';
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    const messagesDiv = document.getElementById("messages");
-    const inputMessage = document.getElementById("inputMessage");
-    const sendBtn = document.getElementById("sendBtn");
-
-    // Listen to new messages in Firestore, ordered by timestamp
-    const q = query(collection(db, "chatmessages"), orderBy("timestamp"));
-
-    onSnapshot(q, (snapshot) => {
-      messagesDiv.innerHTML = ""; // clear
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const div = document.createElement("div");
-        div.textContent = data.text;
-        messagesDiv.appendChild(div);
-      });
-      messagesDiv.scrollTop = messagesDiv.scrollHeight; // scroll to bottom
-    });
-
-    sendBtn.onclick = async () => {
-      const text = inputMessage.value.trim();
-      if (text.length === 0) return;
-
-      await addDoc(collection(db, "chatmessages"), {
-        text,
-        timestamp: serverTimestamp()
+    // Check version.txt
+    fetch(versionURL)
+      .then(response => response.text())
+      .then(latest => {
+        const latestVersion = latest.trim();
+        console.log("Latest version:", latestVersion);
+        if (latestVersion !== currentVersion) {
+          document.getElementById("updatePopup").style.display = "block";
+        }
+      })
+      .catch(err => {
+        console.error("Version check failed:", err);
       });
 
-      inputMessage.value = "";
-    };
+    // Trigger APK download
+    function downloadUpdate() {
+      window.location.href = apkDownloadURL;
+    }
+
+    function hideUpdatePopup() {
+      document.getElementById("updatePopup").style.display = "none";
+    }
   </script>
 
 </body>
