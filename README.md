@@ -75,3 +75,9 @@ https://ihenvyr.github.io/app/platinum-karaoke-songbook/terms-and-conditions.htm
 https://ihenvyr.github.io/app/my-karaoke-songbook/privacy-policy.html
 
 https://ihenvyr.github.io/app/my-karaoke-songbook/terms-and-conditions.html
+
+### MegaPro Karaoke Songbook
+
+https://ihenvyr.github.io/app/megapro-karaoke-songbook/privacy-policy.html
+
+https://ihenvyr.github.io/app/megapro-karaoke-songbook/terms-and-conditions.html
